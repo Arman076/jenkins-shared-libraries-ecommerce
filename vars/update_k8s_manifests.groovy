@@ -1,80 +1,60 @@
-#!/usr/bin/env groovy
-
-/**
- * Update Kubernetes manifests with new image tags and push to GitHub
- *
- * @param config Map of configuration options
- * config.imageTag       -> New Docker image tag (required)
- * config.manifestsPath  -> Path to K8s manifests (default: 'kubernetes')
- * config.gitCredentials -> Jenkins credential ID for GitHub (default: 'Github')
- * config.gitUserName    -> Git commit author name (default: 'Jenkins CI')
- * config.gitUserEmail   -> Git commit author email (default: 'jenkins@example.com')
- * config.gitBranch      -> Branch to push (default: 'main')
- * config.dockerCredentials -> Jenkins credential ID for Docker (default: 'docker-key')
- * config.dockerUsername    -> Docker username (default: 'devil678')
- */
 def call(Map config = [:]) {
     def imageTag = config.imageTag ?: error("Image tag is required")
     def manifestsPath = config.manifestsPath ?: 'kubernetes'
     def gitCredentials = config.gitCredentials ?: 'github-credentials'
     def gitUserName = config.gitUserName ?: 'Arman076'
     def gitUserEmail = config.gitUserEmail ?: 'khanarmankh121@gmail.com'
-    def gitBranch = config.gitBranch ?: 'main'
-    def dockerCredentials = config.dockerCredentials ?: 'docker-hub-credentials'
+    def gitBranch = config.gitBranch ?: 'main'  // changed default
+    def dockerCredentials = config.dockerCredentials ?: 'docker-hub-credentials '
     def dockerUsername = config.dockerUsername ?: 'devil678'
 
     echo "Updating Kubernetes manifests with image tag: ${imageTag}"
 
-    // Use GitHub credentials to push commits
+    // Git push changes
     withCredentials([usernamePassword(
         credentialsId: gitCredentials,
         usernameVariable: 'GIT_USERNAME',
         passwordVariable: 'GIT_PASSWORD'
     )]) {
-
-        // Configure Git commit author
         sh """
             git config user.name "${gitUserName}"
             git config user.email "${gitUserEmail}"
-            
-            git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/devil678/e-commerce-app.git
         """
 
-        // Update main deployment manifest
+        // Update main deployment
         sh """
             sed -i "s|image: devil678/easyshop-app:.*|image: devil678/easyshop-app:${imageTag}|g" ${manifestsPath}/08-easyshop-deployment.yaml
         """
 
-        // Update migration job if it exists
+        // Update migration job if exists
         sh """
             if [ -f "${manifestsPath}/12-migration-job.yaml" ]; then
                 sed -i "s|image: devil678/easyshop-migration:.*|image: devil678/easyshop-migration:${imageTag}|g" ${manifestsPath}/12-migration-job.yaml
             fi
         """
 
-        // Update ingress host if it exists
+        // Update ingress host
         sh """
             if [ -f "${manifestsPath}/10-ingress.yaml" ]; then
                 sed -i "s|host: .*|host: easyshop.letsdeployit.com|g" ${manifestsPath}/10-ingress.yaml
             fi
         """
 
-        // Commit and push changes
+        // Commit & push
         sh """
             git add ${manifestsPath}/*.yaml
-
             if git diff --cached --quiet; then
                 echo "No changes to commit"
             else
                 git commit -m "Update image tags to ${imageTag} and ensure correct domain [ci skip]"
-                git push origin HEAD:${gitBranch}
+                git push https://${GIT_USERNAME}:${GIT_PASSWORD}@\$(git remote get-url origin | sed 's|https://||') HEAD:${gitBranch}
             fi
         """
     }
 
-    // Optional: Docker login if you need to pull/push images
+    // Docker login
     withCredentials([usernamePassword(
-        credentialsId: docker-key,
+        credentialsId: dockerCredentials,
         usernameVariable: 'DOCKER_USERNAME',
         passwordVariable: 'DOCKER_PASSWORD'
     )]) {
