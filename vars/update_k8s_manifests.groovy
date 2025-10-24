@@ -16,11 +16,11 @@
 def call(Map config = [:]) {
     def imageTag = config.imageTag ?: error("Image tag is required")
     def manifestsPath = config.manifestsPath ?: 'kubernetes'
-    def gitCredentials = config.gitCredentials ?: 'Github'
+    def gitCredentials = config.gitCredentials ?: 'github-credentials'
     def gitUserName = config.gitUserName ?: 'Arman076'
     def gitUserEmail = config.gitUserEmail ?: 'khanarmankh121@gmail.com'
     def gitBranch = config.gitBranch ?: 'main'
-    def dockerCredentials = config.dockerCredentials ?: 'docker-key'
+    def dockerCredentials = config.dockerCredentials ?: 'docker-hub-credentials'
     def dockerUsername = config.dockerUsername ?: 'devil678'
 
     echo "Updating Kubernetes manifests with image tag: ${imageTag}"
@@ -37,7 +37,7 @@ def call(Map config = [:]) {
             git config user.name "${gitUserName}"
             git config user.email "${gitUserEmail}"
             
-            git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/devil678/tws-e-commerce-app_hackathon.git
+            git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/devil678/e-commerce-app.git
         """
 
         // Update main deployment manifest
